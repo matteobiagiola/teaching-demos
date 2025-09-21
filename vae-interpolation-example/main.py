@@ -4,10 +4,28 @@ from vae import ConvVAE
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 
+import argparse
+import numpy as np
 
 def main():
+    
+    parser = argparse.ArgumentParser(description="VAE Latent Space Interpolation")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=-1,
+        help="Random seed for reproducibility (default: -1, random seed will be set automatically)",
+    )
+
+    args = parser.parse_args()
+    
+    seed = args.seed
+    if seed == -1:
+        seed = np.random.randint(0, np.iinfo(np.int32).max)
+    
     vae_path = "vae_mnist.pt"
     latent_dim = 20
+    torch.manual_seed(seed)
 
     device = (
         torch.accelerator.current_accelerator()
@@ -18,7 +36,7 @@ def main():
 
     assert os.path.exists(vae_path), f"{vae_path} does not exist"
 
-    vae.load_state_dict(torch.load(vae_path, weights_only=True))
+    vae.load_state_dict(torch.load(vae_path, weights_only=True, map_location=device))
 
     test_dataset = datasets.EMNIST(
         "datasets/",

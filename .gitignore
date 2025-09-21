@@ -7,3 +7,4 @@ evosuite-report
 evosuite-tests
 target
 *.png
+.m2_local

@@ -1,0 +1,12 @@
+{
+    "name": "vae-interpolation-example",
+    "image": "dockercontainervm/torch_matplotlib:2.8.0",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "charliermarsh.ruff",
+                "ms-python.python"
+            ]
+        }
+    }
+}
