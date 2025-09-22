@@ -13,7 +13,13 @@ The image will be around 1.4GB. Then start the `devcontainer`:
 - In VSCode, use the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS) to run the "Dev Containers: Open Folder in Container..." command;
 - Select the `vae-interpolation-example` folder.
 
-Once within the container, select the only python intepreter available, i.e., `3.11.13`. Then type:
+Optionally, start the container without `devcontainer` by typing:
+
+```bash
+docker run -v $PWD:/home/ -it dockercontainervm/torch_matplotlib:2.8.0
+```
+
+Once within the container, if `devcontainer` is used select the only python intepreter available, i.e., `3.11.13`. Then type:
 
 ```bash
 python main.py --seed 0
