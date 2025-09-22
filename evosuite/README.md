@@ -25,13 +25,13 @@ docker run --rm -v $PWD/Tutorial_Stack:/home -v $PWD/.m2_local:/root/.m2 -w /hom
 ## Run Evosuite
 
 ```bash
-docker run --rm -it -u $UID -v $PWD/Tutorial_Stack:/evosuite evosuite/evosuite -class tutorial.Stack -projectCP target/classes -criterion branch
+docker run --rm -u $UID -v $PWD/Tutorial_Stack:/evosuite evosuite/evosuite -class tutorial.Stack -projectCP target/classes -criterion branch
 ```
 
 Finishes quickly as there are only 7 branches (one per method and two per if statement) to cover and all of them are feasible. Now run Evosuite on the `StackNew` class:
 
 ```bash
-docker run --rm -it -u $UID -v $PWD/Tutorial_Stack:/evosuite evosuite/evosuite -class tutorial.StackNew -projectCP target/classes -criterion branch
+docker run --rm -u $UID -v $PWD/Tutorial_Stack:/evosuite evosuite/evosuite -class tutorial.StackNew -projectCP target/classes -criterion branch
 ```
 
 The computation goes ahead until the budget expires (1 minute), without covering all the branches (9 in this case, i.e., 1 per method, also the private one, and 2 per if statement). There is one infeasible branch in the `push` method:
