@@ -29,6 +29,14 @@ The command will download the MNIST dataset, and look for the first pair of digi
 
 Run without specifying the seed to get different pairs of 3s and 5s.
 
+It is also possible to run with generation mode, by explicitly specifying it:
+
+```bash
+python main.py --seed 0 --generation
+```
+
+The commands will generate 10 random latent vectors and then decode them and plot the reconstructed images side by side.
+
 
 
 
