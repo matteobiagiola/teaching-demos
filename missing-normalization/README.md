@@ -3,7 +3,7 @@
 Build the docker container:
 
 ```bash
-docker build -t dockercontainervm/torch_matplotlib:2.8.0 .
+docker build --build-arg USERNAME=$USER --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -t dockercontainervm/torch_matplotlib:2.8.0 .
 ```
 
 The image will be around 1.4GB. Then start the `devcontainer`:
