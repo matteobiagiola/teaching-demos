@@ -47,19 +47,7 @@ def main():
     
     if not generation:
 
-        test_dataset = datasets.EMNIST(
-            "datasets/",
-            train=True,
-            download=True,
-            split="digits",
-            transform=transforms.Compose(
-                [
-                    transforms.Lambda(lambda img: transforms.functional.rotate(img, -90)),
-                    transforms.Lambda(lambda img: transforms.functional.hflip(img)),
-                    transforms.ToTensor(),
-                ]
-            ),
-        )
+        test_dataset = datasets.MNIST('data', train=False, download=True, transform=transforms.ToTensor())
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=2, shuffle=True)
 
         # look for a 5 and a 3
@@ -87,13 +75,7 @@ def main():
                 mu1 = mu1.squeeze(0)
                 mu2 = mu2.squeeze(0)
                 
-                print(mu1)
-                print(mu2)
-                
-                print(sigma1)
-                print(sigma2)
-                
-                print(mu1.shape, mu2.shape)  # should be (latent_dim)
+                # print(mu1.shape, mu2.shape)  # should be (latent_dim)
 
                 steps = 10
                 # Linear interpolation in latent space
@@ -105,7 +87,7 @@ def main():
                 z_interp = torch.stack(
                     [mu1 * (1 - t) + mu2 * t for t in torch.linspace(0, 1, steps)]
                 )
-                print(z_interp.shape)  # should be (steps, latent_dim)
+                # print(z_interp.shape)  # should be (steps, latent_dim)
 
                 recon_images = vae.decode(z_interp).cpu()
 
