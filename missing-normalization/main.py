@@ -73,6 +73,18 @@ def main():
         default=-1,
         help="Random seed for reproducibility (default: -1, random seed will be set automatically)",
     )
+    parser.add_argument(
+        "--train-batch-size",
+        type=int,
+        default=64,
+        help="Batch size for training (default: 64)",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=3,
+        help="Number of epochs to train (default: 3)",
+    )
 
     args = parser.parse_args()
     
@@ -81,6 +93,16 @@ def main():
         seed = np.random.randint(0, np.iinfo(np.int32).max)
     print(f"Using seed: {seed}")
     torch.manual_seed(seed)
+
+    train_batch_size = args.train_batch_size
+    assert train_batch_size > 0, "Batch size must be a positive integer."
+    epochs = args.epochs
+    assert epochs > 0, "Number of epochs must be a positive integer."
+    
+    if torch.cuda.is_available():
+        # Deterministic operations for CuDNN, it may impact performances
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
     
     # --- Data Loading and Transforms ---
 
@@ -98,14 +120,15 @@ def main():
     # Download and create data loaders
     print("Downloading and preparing datasets...")
     train_dataset_unnormalized = datasets.MNIST('data', train=True, download=True, transform=transform_unnormalized)
-    train_loader_unnormalized = torch.utils.data.DataLoader(train_dataset_unnormalized, batch_size=64, shuffle=True)
+    train_loader_unnormalized = torch.utils.data.DataLoader(train_dataset_unnormalized, batch_size=train_batch_size, shuffle=True)
 
     train_dataset_normalized = datasets.MNIST('data', train=True, download=True, transform=transform_normalized)
-    train_loader_normalized = torch.utils.data.DataLoader(train_dataset_normalized, batch_size=64, shuffle=True)
+    train_loader_normalized = torch.utils.data.DataLoader(train_dataset_normalized, batch_size=train_batch_size, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    epochs = 3
-    log_interval = 100
+    print(f"Using device: {device}, training batch size: {train_batch_size}, epochs: {epochs}")
+    # Log 10 times per epoch
+    log_interval = max(1, (len(train_dataset_normalized) // train_batch_size) // 10)
 
     # Setup for Unnormalized Model
     model_unnormalized = SimpleNet().to(device)
@@ -115,33 +138,40 @@ def main():
     model_normalized = SimpleNet().to(device)
     optimizer_normalized = optim.SGD(model_normalized.parameters(), lr=0.01)
 
+    losses_unnormalized = []
+    losses_normalized = []
+
     print(f"--- Training with UNNORMALIZED data for {epochs} epochs ---")
     for epoch in range(1, epochs + 1):
-        losses_unnormalized = train_model(
-            model=model_unnormalized, 
-            device=device, 
-            train_loader=train_loader_unnormalized, 
-            optimizer=optimizer_unnormalized, 
-            epoch=epoch, 
-            log_interval=log_interval, 
+        losses_unnormalized.extend(
+            train_model(
+                model=model_unnormalized, 
+                device=device, 
+                train_loader=train_loader_unnormalized, 
+                optimizer=optimizer_unnormalized, 
+                epoch=epoch, 
+                log_interval=log_interval, 
+            )
         )
 
     print(f"\n--- Training with NORMALIZED data for {epochs} epochs ---")
     for epoch in range(1, epochs + 1):
-        losses_normalized = train_model(
-            model=model_normalized, 
-            device=device, 
-            train_loader=train_loader_normalized, 
-            optimizer=optimizer_normalized, 
-            epoch=epoch, 
-            log_interval=log_interval
+        losses_normalized.extend(
+            train_model(
+                model=model_normalized, 
+                device=device, 
+                train_loader=train_loader_normalized, 
+                optimizer=optimizer_normalized, 
+                epoch=epoch, 
+                log_interval=log_interval
+            )
         )
 
     test_dataset_unnormalized = datasets.MNIST('data', train=False, download=True, transform=transform_unnormalized)
-    test_loader_unnormalized = torch.utils.data.DataLoader(test_dataset_unnormalized, batch_size=1000, shuffle=False)
+    test_loader_unnormalized = torch.utils.data.DataLoader(test_dataset_unnormalized, batch_size=1024, shuffle=False)
 
     test_dataset_normalized = datasets.MNIST('data', train=False, download=True, transform=transform_normalized)
-    test_loader_normalized = torch.utils.data.DataLoader(test_dataset_normalized, batch_size=1000, shuffle=False)
+    test_loader_normalized = torch.utils.data.DataLoader(test_dataset_normalized, batch_size=1024, shuffle=False)
 
     print("\n--- Evaluation on UNNORMALIZED data ---")
     accuracy_unnormalized = evaluate_model(
@@ -167,7 +197,7 @@ def main():
     plt.xlabel('Training Steps (batches)')
     plt.ylabel('Training Loss')
     plt.legend()
-    plt.savefig(f"normalization_impact_seed_{seed}.png", bbox_inches='tight', dpi=300)
+    plt.savefig(f"normalization_impact_epochs_{epochs}_batch_{train_batch_size}_seed_{seed}.png", bbox_inches='tight', dpi=300)
 
 if __name__ == "__main__":
     main()

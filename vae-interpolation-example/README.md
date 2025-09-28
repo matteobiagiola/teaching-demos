@@ -3,7 +3,7 @@
 Build the docker container:
 
 ```bash
-docker build --build-arg USERNAME=$USER --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -t dockercontainervm/torch_matplotlib:2.8.0 .
+docker build --build-arg USERNAME=$USER --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -t torch_matplotlib:2.8.0 .
 ```
 
 The image will be around 1.4GB. Then start the `devcontainer`:
@@ -16,7 +16,7 @@ The image will be around 1.4GB. Then start the `devcontainer`:
 Optionally, start the container without `devcontainer` by typing:
 
 ```bash
-docker run -v $PWD:/home/ -it dockercontainervm/torch_matplotlib:2.8.0
+docker run -v $PWD:/home/ -it torch_matplotlib:2.8.0
 ```
 
 Once within the container, if `devcontainer` is used select the only python intepreter available, i.e., `3.11.13`. Then type:

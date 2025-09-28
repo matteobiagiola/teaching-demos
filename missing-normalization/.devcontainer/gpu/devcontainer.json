@@ -1,11 +1,12 @@
 {
     "name": "vae-interpolation-example",
-    "image": "torch_matplotlib:2.8.0",
+    "image": "torch_matplotlib:2.8.0-cuda",
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-python.python"
             ]
         }
-    }
+    },
+    "runArgs": [ "--gpus", "all" ]
 }
