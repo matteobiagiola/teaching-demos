@@ -34,11 +34,7 @@ def main():
     latent_dim = 20
     torch.manual_seed(seed)
 
-    device = (
-        torch.accelerator.current_accelerator()
-        if torch.cuda.is_available()
-        else torch.device("cpu")
-    )
+    device = torch.device("cpu")
     vae = ConvVAE(latent_dim=latent_dim).to(device)
 
     assert os.path.exists(vae_path), f"{vae_path} does not exist"
