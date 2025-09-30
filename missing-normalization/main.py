@@ -133,6 +133,13 @@ def main():
     # Setup for Unnormalized Model
     model_unnormalized = SimpleNet().to(device)
     optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=0.01)
+    
+    # # example tensor shape error
+    # with torch.no_grad():
+    #     img1 = torch.randn(1, 2, 28, 28)
+    #     out = model_unnormalized(img1)
+    #     print(out.shape)  # should be (1, 10)
+    # exit(1)
 
     # Setup for Normalized Model
     model_normalized = SimpleNet().to(device)
