@@ -1,0 +1,11 @@
+{
+    "name": "neuron-coverage",
+    "image": "torch_matplotlib:2.8.0",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python"
+            ]
+        }
+    }
+}
