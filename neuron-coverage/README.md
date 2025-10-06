@@ -16,7 +16,7 @@ Then start the `devcontainer`:
 Optionally, start the container without `devcontainer` by typing:
 
 ```bash
-docker run -v $PWD:/home/ -it torch_matplotlib:2.8.0
+docker run --rm -v $PWD:/home/ -it torch_matplotlib:2.8.0
 ```
 
 Once within the container, if `devcontainer` is used select the only python intepreter available, i.e., `3.11.13`. Then type:
