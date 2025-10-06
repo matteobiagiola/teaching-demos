@@ -29,13 +29,13 @@ class SimpleNet(nn.Module):
     
 # --- Training Loop Function ---
 def train_model(
-        model: nn.Module, 
-        device: torch.device, 
-        train_loader: torch.utils.data.DataLoader, 
-        optimizer: optim.Optimizer, 
-        epoch: int, 
-        log_interval: int
-    ) -> List[float]:
+    model: nn.Module, 
+    device: torch.device, 
+    train_loader: torch.utils.data.DataLoader, 
+    optimizer: optim.Optimizer, 
+    epoch: int, 
+    log_interval: int
+) -> List[float]:
 
     losses = []
     model.train()
@@ -140,6 +140,22 @@ def main():
     #     out = model_unnormalized(img1)
     #     print(out.shape)  # should be (1, 10)
     # exit(1)
+    
+    # # data inspection, original, unnormalized and normalized
+    # train_dataset_original = datasets.MNIST('data', train=True, download=True)
+    # img_pil, _ = train_dataset_original[0]   # img_pil is a PIL.Image (grayscale)
+    # print(f"Original image format: {np.array(img_pil).shape}")
+    # print(np.array(img_pil))  # (H, W), values in [0, 255]
+    # # apply transforms to the same PIL image
+    # x_unnorm = transform_unnormalized(img_pil)     # torch.Size([1, H, W]), values in [0, 1]
+    # print(f"After ToTensor (unnormalized): {x_unnorm.shape}")
+    # print(x_unnorm)
+    # x_norm   = transform_normalized(img_pil)       # torch.Size([1, H, W]), roughly in [-0.42, 2.82]
+    # print(f"After ToTensor + Normalize (normalized): {x_norm.shape}")
+    # print(x_norm)
+    # print("The normalized image has mean 0 and std 1 approximately.")
+    # print("Mean:", x_norm.mean().item(), "Std:", x_norm.std().item())
+    # exit(1)
 
     # Setup for Normalized Model
     model_normalized = SimpleNet().to(device)
@@ -152,6 +168,7 @@ def main():
     for epoch in range(1, epochs + 1):
         losses_unnormalized.extend(
             train_model(
+                training_type="unnormalized",
                 model=model_unnormalized, 
                 device=device, 
                 train_loader=train_loader_unnormalized, 
@@ -165,6 +182,7 @@ def main():
     for epoch in range(1, epochs + 1):
         losses_normalized.extend(
             train_model(
+                training_type="normalized",
                 model=model_normalized, 
                 device=device, 
                 train_loader=train_loader_normalized, 
