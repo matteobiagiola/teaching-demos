@@ -1,3 +1,6 @@
+import os
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":16:8"   # or ":4096:8"
+
 from typing import List
 import numpy as np
 import torch
@@ -115,6 +118,7 @@ def main():
         # Deterministic operations for CuDNN, it may impact performances
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True)
     
     # --- Data Loading and Transforms ---
 
@@ -168,6 +172,8 @@ def main():
     
     # Setup for Unnormalized Model
     model_unnormalized = SimpleNet().to(device)
+    # GPU bug
+    # model_unnormalized = SimpleNet()
     optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=learning_rate)
 
     # Setup for Normalized Model
