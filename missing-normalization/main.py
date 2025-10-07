@@ -59,8 +59,12 @@ def evaluate_model(model: nn.Module, device: torch.device, testloader: torch.uti
         for inputs, labels in testloader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
+            # takes the maximum value within eah row of the outputs tensor 
+            # (i.e., reduces along the columns that represent class scores)
+            # the "predicted" tensor contains the indices of the classes with the highest scores
+            # i.e., as many elements as the rows of outputs (= batch size)
+            _, predicted = torch.max(outputs, dim=1)
+            total += len(labels)
             correct += (predicted == labels).sum().item()
     return 100 * correct / total
 
@@ -85,6 +89,12 @@ def main():
         default=3,
         help="Number of epochs to train (default: 3)",
     )
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=0.05,
+        help="Learning rate (default: 0.05)",
+    )
 
     args = parser.parse_args()
     
@@ -98,6 +108,8 @@ def main():
     assert train_batch_size > 0, "Batch size must be a positive integer."
     epochs = args.epochs
     assert epochs > 0, "Number of epochs must be a positive integer."
+    learning_rate = args.learning_rate
+    assert learning_rate > 0, "Learning rate must be a positive float."
     
     if torch.cuda.is_available():
         # Deterministic operations for CuDNN, it may impact performances
@@ -108,13 +120,14 @@ def main():
 
     # Standard transforms for MNIST
     transform_unnormalized = transforms.Compose([
-        transforms.ToTensor()
+        transforms.PILToTensor(),                # -> uint8 tensor in [0, 255], CxHxW
+        transforms.Lambda(lambda x: x.float()),  # cast to float *without* scaling
     ])
 
     # Transforms with normalization using pre-calculated mean and std of MNIST
     transform_normalized = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.ToTensor(),                      # -> float tensor in [0, 1], CxHxW
+        transforms.Normalize((0.1307,), (0.3081,))  # mean and std for MNIST
     ])
 
     # Download and create data loaders
@@ -129,10 +142,6 @@ def main():
     print(f"Using device: {device}, training batch size: {train_batch_size}, epochs: {epochs}")
     # Log 10 times per epoch
     log_interval = max(1, (len(train_dataset_normalized) // train_batch_size) // 10)
-
-    # Setup for Unnormalized Model
-    model_unnormalized = SimpleNet().to(device)
-    optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=0.01)
     
     # # example tensor shape error
     # with torch.no_grad():
@@ -147,19 +156,23 @@ def main():
     # print(f"Original image format: {np.array(img_pil).shape}")
     # print(np.array(img_pil))  # (H, W), values in [0, 255]
     # # apply transforms to the same PIL image
-    # x_unnorm = transform_unnormalized(img_pil)     # torch.Size([1, H, W]), values in [0, 1]
-    # print(f"After ToTensor (unnormalized): {x_unnorm.shape}")
+    # x_unnorm = transform_unnormalized(img_pil)     # torch.Size([C, H, W]), values in [0.0, 255.0]
+    # print(f"\nAfter ToTensor (unnormalized): {x_unnorm.shape}")
     # print(x_unnorm)
-    # x_norm   = transform_normalized(img_pil)       # torch.Size([1, H, W]), roughly in [-0.42, 2.82]
-    # print(f"After ToTensor + Normalize (normalized): {x_norm.shape}")
+    # x_norm   = transform_normalized(img_pil)       # torch.Size([C, H, W]), roughly in [-0.42, 2.82]
+    # print(f"\nAfter ToTensor + Normalize (normalized): {x_norm.shape}")
     # print(x_norm)
-    # print("The normalized image has mean 0 and std 1 approximately.")
+    # print("\nThe normalized image has mean 0 and std 1 approximately.")
     # print("Mean:", x_norm.mean().item(), "Std:", x_norm.std().item())
     # exit(1)
+    
+    # Setup for Unnormalized Model
+    model_unnormalized = SimpleNet().to(device)
+    optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=learning_rate)
 
     # Setup for Normalized Model
     model_normalized = SimpleNet().to(device)
-    optimizer_normalized = optim.SGD(model_normalized.parameters(), lr=0.01)
+    optimizer_normalized = optim.SGD(model_normalized.parameters(), lr=learning_rate)
 
     losses_unnormalized = []
     losses_normalized = []
@@ -168,7 +181,6 @@ def main():
     for epoch in range(1, epochs + 1):
         losses_unnormalized.extend(
             train_model(
-                training_type="unnormalized",
                 model=model_unnormalized, 
                 device=device, 
                 train_loader=train_loader_unnormalized, 
@@ -182,7 +194,6 @@ def main():
     for epoch in range(1, epochs + 1):
         losses_normalized.extend(
             train_model(
-                training_type="normalized",
                 model=model_normalized, 
                 device=device, 
                 train_loader=train_loader_normalized, 
@@ -218,11 +229,12 @@ def main():
     plt.figure(figsize=(10, 5))
     plt.plot(losses_unnormalized, label='Loss (w/o Normalization)')
     plt.plot(losses_normalized, label='Loss (w/ Normalization)')
+    plt.ylim(0, 2)
     plt.title('Loss Curve Comparison')
     plt.xlabel('Training Steps (batches)')
     plt.ylabel('Training Loss')
     plt.legend()
-    plt.savefig(f"normalization_impact_epochs_{epochs}_batch_{train_batch_size}_seed_{seed}.png", bbox_inches='tight', dpi=300)
+    plt.savefig(f"normalization_impact_epochs_{epochs}_batch_{train_batch_size}_lr_{learning_rate}_seed_{seed}.png", bbox_inches='tight', dpi=300)
 
 if __name__ == "__main__":
     main()
