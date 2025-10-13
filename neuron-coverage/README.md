@@ -1,9 +1,9 @@
 # Setup
 
-Build the docker container (CPU version, recommended):
+Build the docker container:
 
 ```bash
-docker build --build-arg USERNAME=$USER --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -f cpu.Dockerfile -t torch_matplotlib:2.8.0 .
+docker build --build-arg USERNAME=$USER --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -t torch_matplotlib:2.8.0 .
 ```
 
 Then start the `devcontainer`:
