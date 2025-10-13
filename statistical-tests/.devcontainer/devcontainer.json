@@ -1,0 +1,11 @@
+{
+    "name": "statistical-tests",
+    "image": "stats:latest",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python"
+            ]
+        }
+    }
+}
