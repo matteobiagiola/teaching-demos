@@ -147,14 +147,7 @@ def main():
     # Log 10 times per epoch
     log_interval = max(1, (len(train_dataset_normalized) // train_batch_size) // 10)
     
-    # # example tensor shape error
-    # with torch.no_grad():
-    #     img1 = torch.randn(1, 2, 28, 28)
-    #     out = model_unnormalized(img1)
-    #     print(out.shape)  # should be (1, 10)
-    # exit(1)
-    
-    # # data inspection, original, unnormalized and normalized
+    # data inspection, original, unnormalized and normalized
     # train_dataset_original = datasets.MNIST('data', train=True, download=True)
     # img_pil, _ = train_dataset_original[0]   # img_pil is a PIL.Image (grayscale)
     # print(f"Original image format: {np.array(img_pil).shape}")
@@ -172,6 +165,14 @@ def main():
     
     # Setup for Unnormalized Model
     model_unnormalized = SimpleNet().to(device)
+    
+    # # example tensor shape error
+    # with torch.no_grad():
+    #     img1 = torch.randn(2, 1, 28, 28) # (B, C, H, W)
+    #     out = model_unnormalized(img1)
+    #     print(out.shape)  # should be (1, 10)
+    # exit(1)
+    
     # GPU bug
     # model_unnormalized = SimpleNet()
     optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=learning_rate)
