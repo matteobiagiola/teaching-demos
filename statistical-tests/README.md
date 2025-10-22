@@ -11,7 +11,7 @@ Then start the `devcontainer`:
 - Download [VSCode](https://code.visualstudio.com/Download) for your platform;
 - Install DevContainer Extension;
 - In VSCode, use the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS) to run the "Dev Containers: Open Folder in Container..." command;
-- Select the `neuron-coverage` folder;
+- Select the `statistical-tests` folder;
 
 Optionally, start the container without `devcontainer` by typing:
 

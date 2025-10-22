@@ -1,0 +1,11 @@
+{
+    "name": "pbt-demo",
+    "image": "hypothesis:6.142.1",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python"
+            ]
+        }
+    }
+}

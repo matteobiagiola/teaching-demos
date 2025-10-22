@@ -1,5 +1,4 @@
 .venv
-__pycache__/
 datasets
 data
 .python-version
@@ -10,3 +9,7 @@ target
 *.png
 .m2_local
 conceptd
+.hypothesis
+.pytest_cache
+__pycache__
+*.pyc
