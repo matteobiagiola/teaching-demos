@@ -7,5 +7,6 @@
                 "ms-python.python"
             ]
         }
-    }
+    },
+    "containerUser": "${env:USERNAME}"
 }

@@ -8,5 +8,6 @@
             ]
         }
     },
+    "containerUser": "${env:USERNAME}",
     "runArgs": [ "--gpus", "all" ]
 }
