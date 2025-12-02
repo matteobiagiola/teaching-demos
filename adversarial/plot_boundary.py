@@ -1,14 +1,18 @@
+import os
 from typing import Optional, Tuple
+
+from matplotlib.colors import LightSource
 from net import Net
 from torchvision import datasets, transforms
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
+
+import argparse
 
 
 def get_adversarial_direction_untargeted_fgsm(
@@ -169,6 +173,9 @@ def plot_decision_boundary(
             perturbed = img_flat + x * dir_x + y * dir_y
             perturbed = perturbed.reshape(-1, *base_image_shape[1:])
 
+            # Normalize the perturbed image
+            perturbed = transforms.Normalize((0.1307,), (0.3081,))(perturbed)
+
             # Get prediction
             with torch.no_grad():
                 output = model(perturbed)
@@ -178,7 +185,7 @@ def plot_decision_boundary(
 
                 predictions[j, i] = pred.item()
                 confidences[j, i] = confidence.item()
-                if pred != true_label:
+                if pred != true_label and not tridimensional_plot:
                     to_plot_images.append((perturbed, pred.item(), i, j, x, y))
 
     for perturbed, pred, i, j, x, y in to_plot_images:
@@ -225,7 +232,7 @@ def plot_decision_boundary(
         ax.scatter(
             0,
             0,
-            confidences[(grid_size) // 2, (grid_size) // 2] + 0.05,
+            confidences[(grid_size) // 2, (grid_size) // 2],
             edgecolors="k",
             color="k",
             marker="*",
@@ -257,7 +264,7 @@ def plot_decision_boundary(
         cbar.set_label("Predicted Class (Color)")
 
         ax.set_title(
-            f"3D Model Confidence on Correct Prediction Landscape (Center: True Label {label})"
+            f"3D Model Confidence on Correct Prediction Landscape (Center: True Label {true_label})"
         )
         ax.set_xlabel(
             "Perturbation in X direction (Adversarial)"
@@ -305,15 +312,30 @@ def plot_decision_boundary(
     return dir_x, dir_y
 
 
-if __name__ == "__main__":
+def main() -> None:
 
-    seed = 0
+    parser = argparse.ArgumentParser(description="Plot Decision Boundary")
+    parser.add_argument(
+        "--model-path", type=str, required=True, help="Path to the trained model"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=0, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--index-image", type=int, default=-1, help="Index of the test image to use"
+    )
+    args = parser.parse_args()
+
+    seed = args.seed
+    model_path = args.model_path
+    assert os.path.exists(model_path), f"Model path {model_path} does not exist."
+
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     model = Net(num_classes=10)
     model.load_state_dict(
-        torch.load("mnist.pt", map_location=torch.device("cpu")), strict=True
+        torch.load(model_path, map_location=torch.device("cpu")), strict=True
     )
     model.eval()
 
@@ -325,60 +347,107 @@ if __name__ == "__main__":
         "./data", train=False, download=True, transform=transform
     )
 
-    # find an image correctly classified but with low confidence; easier to perturb
-    index = -1
-    for i in range(len(test_dataset)):
-
-        image, label = test_dataset[i]
+    if args.index_image != -1:
+        index = args.index_image
+        image, label = test_dataset[index]
         image_batch = image.unsqueeze(0)
-
         with torch.no_grad():
             output = model(image_batch)
             pred = output.argmax(dim=1).item()
             probs = F.softmax(output, dim=1)
             confidence = probs[0, label].item()
 
-        if pred == label and confidence < 0.9:
+        if pred != label:
+            raise ValueError(
+                f"The image at index {index} is misclassified by the model."
+            )
+        print(
+            f"Confidence of selected image with index {index} in the correct prediction {label}: {confidence}"
+        )
+    else:
+        # find an image correctly classified but with low confidence; easier to perturb
+        index = -1
+        for i in range(len(test_dataset)):
 
-            print("Confidence of selected image:", confidence)
+            image, label = test_dataset[i]
+            image_batch = image.unsqueeze(0)
 
-            index = i
-            break
+            with torch.no_grad():
+                output = model(image_batch)
+                pred = output.argmax(dim=1).item()
+                probs = F.softmax(output, dim=1)
+                confidence = probs[0, label].item()
 
-    if index == -1:
-        print("No successful adversarial example found in the test set.")
-        exit(0)
+            if pred == label and confidence < 0.9:
+
+                print(
+                    f"Confidence of selected image with index {i} in the correct prediction {label}: {confidence}"
+                )
+
+                index = i
+                break
+
+        if index == -1:
+            print("No successful adversarial example found in the test set.")
+            exit(0)
 
     image, label = test_dataset[index]
     image_batch = image.unsqueeze(0)
 
+    filename = f"decision_boundary_rand_{label}"
+    if "robust" in model_path:
+        filename = f"decision_boundary_robust_rand_{label}"
+
     print("\nGenerating decision boundary plot...")
-    _, dir_y = plot_decision_boundary(
+    dir_x, dir_y = plot_decision_boundary(
         model=model,
         base_image=image_batch,
         true_label=label,
         grid_size=100,
-        noise_scale=40,
-        filename=f"decision_boundary_rand_{label}",
-    )
-
-    # the target class is 8 because the image chose above (which is a 3) is the most vulnerable to being perturbed to class 8
-    target_class = 8
-    dir_x = get_adversarial_direction_targeted(
-        model=model,
-        image=image_batch,
-        target_class=torch.tensor([target_class]),
+        noise_scale=30,
+        filename=filename,
     )
 
     _ = plot_decision_boundary(
         model=model,
         base_image=image_batch,
         true_label=label,
+        tridimensional_plot=True,
+        dir_x=dir_x,
+        dir_y=dir_y,
         grid_size=100,
-        noise_scale=40,
+        noise_scale=30,
+        filename=filename,
+    )
+
+    # the target class is 8 because the image chose above (which is a 3) is the most vulnerable to being perturbed to class 8
+    # target_class = 8
+    # dir_x = get_adversarial_direction_targeted(
+    #     model=model,
+    #     image=image_batch,
+    #     target_class=torch.tensor([target_class]),
+    # )
+    dir_x = get_adversarial_direction_untargeted_fgsm(
+        model=model, image=image_batch, label=torch.tensor([label])
+    )
+
+    # filename = f"decision_boundary_adv_targeted_{label}_to_{target_class}"
+    # if "robust" in model_path:
+    #     filename = f"decision_boundary_robust_adv_targeted_{label}_to_{target_class}"
+
+    filename = f"decision_boundary_adv_untargeted_{label}"
+    if "robust" in model_path:
+        filename = f"decision_boundary_robust_adv_untargeted_{label}"
+
+    _ = plot_decision_boundary(
+        model=model,
+        base_image=image_batch,
+        true_label=label,
+        grid_size=100,
+        noise_scale=30,
         dir_y=dir_y,
         dir_x=dir_x,
-        filename=f"decision_boundary_adv_targeted_{label}_to_{target_class}",
+        filename=filename,
     )
 
     _ = plot_decision_boundary(
@@ -387,8 +456,13 @@ if __name__ == "__main__":
         true_label=label,
         tridimensional_plot=True,
         grid_size=100,
-        noise_scale=40,
+        noise_scale=30,
         dir_y=dir_y,
         dir_x=dir_x,
-        filename=f"decision_boundary_adv_targeted_{label}_to_{target_class}",
+        filename=filename,
     )
+
+
+if __name__ == "__main__":
+
+    main()
