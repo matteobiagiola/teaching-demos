@@ -61,16 +61,27 @@ class Net(nn.Module):
         return output
 
 
+class ThermometerSTE(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, thresholds):
+        return (x >= thresholds).float()
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # Straight-through estimator: pass gradient back unchanged
+        return grad_output, None
+
+
 class ThermometerEncoder:
     """
     Thermometer encoding for adversarial defense.
     Discretizes continuous values into levels and encodes as thermometer code.
     """
 
-    def __init__(self, num_levels=16):
+    def __init__(self, num_levels: int = 16) -> None:
         self.num_levels = num_levels
 
-    def encode(self, x):
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Encode input tensor using thermometer encoding.
 
@@ -82,10 +93,24 @@ class ThermometerEncoder:
         """
         batch_size, channels, height, width = x.shape
 
+        x_clone = x.clone()
+        x_clone = x_clone * 0.3081 + 0.1307
+
+        # print(x_clone.view(-1))
+        # print()
+
         # Discretize to num_levels
         # Scale to [0, num_levels] and floor
-        discretized = torch.floor(x * self.num_levels)
-        discretized = torch.clamp(discretized, 0, self.num_levels - 1)
+        # discretized = torch.floor(x_clone * self.num_levels)
+        # print(discretized.view(-1))
+        # print()
+        # discretized = torch.clamp(discretized, 0, self.num_levels - 1)
+        # print(discretized.view(-1))
+        # print()
+
+        thresholds = torch.linspace(
+            0, 1, steps=self.num_levels, device=x.device, dtype=x.dtype
+        )
 
         # Create thermometer encoding
         # For each pixel value v, create binary vector [1,1,...,1,0,0,...,0]
@@ -100,12 +125,31 @@ class ThermometerEncoder:
             dtype=x.dtype,
         )
 
-        for level in range(self.num_levels):
-            # Set to 1 if discretized value > level
-            encoded[:, :, level, :, :] = (discretized >= level).float()
+        # print(encoded.shape)
+
+        for i, t in enumerate(thresholds):
+            # Set to 1 if value >= threshold
+            encoded[:, :, i] = ThermometerSTE.apply(x_clone, t)
+            # encoded[:, :, i, :, :] = ThermometerSTE.apply(x_clone, t)
+            # print(f"Threshold {t}:")
+            # print(encoded[:, :, i, :, :].view(-1))
+            # print()
+
+        # for level in range(self.num_levels):
+        #     # Set to 1 if discretized value > level)
+        #     # encoded[:, :, level, :, :] = (discretized >= level).float()
+        #     encoded[:, :, level, :, :] = ThermometerSTE.apply(
+        #         discretized, torch.tensor(level)
+        #     )
+        #     # print(f"Level {level} encoding:")
+        #     # print(encoded[:, :, level, :, :].view(-1))
+        #     # print()
 
         # Reshape to (B, C * num_levels, H, W)
         encoded = encoded.view(batch_size, channels * self.num_levels, height, width)
+
+        # print(encoded.view(-1).shape)
+        # assert False
 
         return encoded
 
@@ -116,7 +160,7 @@ class ThermometerCNN(nn.Module):
     Matches the architecture of the provided Net class.
     """
 
-    def __init__(self, num_levels=16, num_classes=10):
+    def __init__(self, num_levels: int = 16, num_classes: int = 10) -> None:
         super(ThermometerCNN, self).__init__()
         self.encoder = ThermometerEncoder(num_levels=num_levels)
 
@@ -130,7 +174,7 @@ class ThermometerCNN(nn.Module):
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, num_classes)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Apply thermometer encoding
         x = self.encoder.encode(x)
 

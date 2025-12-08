@@ -94,12 +94,6 @@ def main():
         "--model-path", type=str, required=True, help="Path to the trained model"
     )
     parser.add_argument(
-        "--seed",
-        type=int,
-        default=-1,
-        help="Random seed for reproducibility (-1 means random)",
-    )
-    parser.add_argument(
         "--epsilon", type=float, default=0.01, help="Perturbation magnitude for FGSM"
     )
     parser.add_argument(
@@ -117,12 +111,9 @@ def main():
     )
     args = parser.parse_args()
 
-    seed = args.seed
-
-    if seed == -1:
-        seed = np.random.randint(0, np.iinfo(np.int32).max)
-
-    print(f"Using random seed: {seed}")
+    seed = 0
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     model_path = args.model_path
     assert os.path.exists(model_path), f"Model path {model_path} does not exist."
@@ -132,13 +123,11 @@ def main():
     confidence_threshold = args.confidence_threshold
     assert 0.0 < confidence_threshold <= 1.0, "Confidence threshold must be in (0, 1]."
 
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-
     model = Net(num_classes=10)
     model.load_state_dict(
         torch.load(model_path, map_location=torch.device("cpu")), strict=True
     )
+
     model.eval()
 
     # Get a test image
@@ -149,12 +138,8 @@ def main():
         "./data", train=False, download=True, transform=transform
     )
 
-    is_correctly_classified = False
-    while not is_correctly_classified:
-
-        # take a random sample from the test dataset
-        idx = np.random.randint(len(test_dataset))
-        image, target = test_dataset[idx]
+    index_to_select = None
+    for idx, (image, target) in enumerate(test_dataset):
         image = image.unsqueeze(0)  # add batch dimension
         target = torch.tensor([target])
 
@@ -167,7 +152,15 @@ def main():
                 pred.item() == target.item()
                 and confidence.item() < confidence_threshold
             ):
-                is_correctly_classified = True
+                index_to_select = idx
+                break
+
+    assert (
+        index_to_select is not None
+    ), "No suitable test sample found under the confidence threshold."
+    image, target = test_dataset[index_to_select]
+    image = image.unsqueeze(0)  # add batch dimension
+    target = torch.tensor([target])
 
     if target_class != -1:
         # Untargeted attack: choose a target class different from original

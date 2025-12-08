@@ -1,8 +1,8 @@
 import os
 from typing import Optional, Tuple
 
-from matplotlib.colors import LightSource
-from net import Net
+from input_transformation_defense import CompressionDefence
+from net import Net, ThermometerCNN
 from torchvision import datasets, transforms
 from matplotlib import cm
 
@@ -16,7 +16,9 @@ import argparse
 
 
 def get_adversarial_direction_untargeted_fgsm(
-    model: nn.Module, image: torch.Tensor, label: torch.Tensor
+    model: nn.Module,
+    image: torch.Tensor,
+    label: torch.Tensor,
 ) -> torch.Tensor:
     """
     Generates the adversarial direction using the Fast Gradient Sign Method (FGSM).
@@ -43,7 +45,9 @@ def get_adversarial_direction_untargeted_fgsm(
 
 
 def get_adversarial_direction_untargeted_raw(
-    model: nn.Module, image: torch.Tensor, label: torch.Tensor
+    model: nn.Module,
+    image: torch.Tensor,
+    label: torch.Tensor,
 ) -> torch.Tensor:
     """
     Generates the adversarial direction to perturb the image away from the true class.
@@ -107,6 +111,7 @@ def plot_decision_boundary(
     noise_scale: float = 5.0,
     dir_x: Optional[torch.Tensor] = None,
     dir_y: Optional[torch.Tensor] = None,
+    compression_defense: Optional[CompressionDefence] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Plots the decision boundary of the model around the given image in 2D perturbation space.
@@ -129,6 +134,10 @@ def plot_decision_boundary(
     :type dir_x: torch.Tensor, optional
     :param dir_y: Optional predefined direction for y-axis
     :type dir_y: torch.Tensor, optional
+    :param compression_defense: Optional compression defense to apply to perturbed images
+    :type compression_defense: CompressionDefence, optional
+    :return: The directions used for x and y axes
+    :rtype: Tuple[torch.Tensor, torch.Tensor]
     """
 
     model.eval()
@@ -171,13 +180,15 @@ def plot_decision_boundary(
         for j, y in enumerate(y_range):
             # Create perturbed image
             perturbed = img_flat + x * dir_x + y * dir_y
-            perturbed = perturbed.reshape(-1, *base_image_shape[1:])
 
-            # Normalize the perturbed image
-            perturbed = transforms.Normalize((0.1307,), (0.3081,))(perturbed)
+            perturbed = perturbed.reshape(-1, *base_image_shape[1:])
 
             # Get prediction
             with torch.no_grad():
+
+                if compression_defense is not None:
+                    perturbed = compression_defense.defend(perturbed)
+
                 output = model(perturbed)
                 probs = F.softmax(output, dim=1)
                 pred = output.argmax(dim=1)
@@ -251,10 +262,11 @@ def plot_decision_boundary(
             facecolors=face_colors,
             rstride=1,
             cstride=1,
-            linewidth=0,
+            linewidth=0.25,
+            edgecolor="k",
             antialiased=True,
             shade=False,
-            alpha=1.0,
+            alpha=0.8,
         )
 
         # Custom mapping for legend
@@ -324,20 +336,51 @@ def main() -> None:
     parser.add_argument(
         "--index-image", type=int, default=-1, help="Index of the test image to use"
     )
+    parser.add_argument(
+        "--jpeg-compression",
+        action="store_true",
+        default=False,
+        help="Apply JPEG compression defense (default quality is 95)",
+    )
+    parser.add_argument(
+        "--thermometer-encoding",
+        action="store_true",
+        default=False,
+        help="Use thermometer encoding for the model",
+    )
+    parser.add_argument(
+        "--num-levels",
+        type=int,
+        default=16,
+        help="Number of levels for thermometer encoding (if used)",
+    )
     args = parser.parse_args()
 
     seed = args.seed
     model_path = args.model_path
     assert os.path.exists(model_path), f"Model path {model_path} does not exist."
+    jpeg_compression = args.jpeg_compression
+    thermometer_encoding = args.thermometer_encoding
+    num_levels = args.num_levels
 
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    model = Net(num_classes=10)
+    if thermometer_encoding:
+        # original network was trained with 16 levels thermometer encoding
+        model = ThermometerCNN(num_levels=num_levels, num_classes=10)
+    else:
+        model = Net(num_classes=10)
+
     model.load_state_dict(
         torch.load(model_path, map_location=torch.device("cpu")), strict=True
     )
     model.eval()
+
+    if jpeg_compression:
+        compression_defense = CompressionDefence(jpeg_quality=95)
+    else:
+        compression_defense = None
 
     # Get a test image
     transform = transforms.Compose(
@@ -351,6 +394,7 @@ def main() -> None:
         index = args.index_image
         image, label = test_dataset[index]
         image_batch = image.unsqueeze(0)
+
         with torch.no_grad():
             output = model(image_batch)
             pred = output.argmax(dim=1).item()
@@ -393,10 +437,13 @@ def main() -> None:
 
     image, label = test_dataset[index]
     image_batch = image.unsqueeze(0)
+    model_path_no_ext = os.path.splitext(os.path.basename(model_path))[0]
 
-    filename = f"decision_boundary_rand_{label}"
-    if "robust" in model_path:
-        filename = f"decision_boundary_robust_rand_{label}"
+    filename = f"decision_boundary_rand_{label}_{model_path_no_ext}"
+    if jpeg_compression:
+        filename += "_jpeg_defense"
+    if thermometer_encoding:
+        filename += "_thermometer_encoding"
 
     print("\nGenerating decision boundary plot...")
     dir_x, dir_y = plot_decision_boundary(
@@ -406,6 +453,7 @@ def main() -> None:
         grid_size=100,
         noise_scale=30,
         filename=filename,
+        compression_defense=compression_defense,
     )
 
     _ = plot_decision_boundary(
@@ -418,26 +466,18 @@ def main() -> None:
         grid_size=100,
         noise_scale=30,
         filename=filename,
+        compression_defense=compression_defense,
     )
 
-    # the target class is 8 because the image chose above (which is a 3) is the most vulnerable to being perturbed to class 8
-    # target_class = 8
-    # dir_x = get_adversarial_direction_targeted(
-    #     model=model,
-    #     image=image_batch,
-    #     target_class=torch.tensor([target_class]),
-    # )
     dir_x = get_adversarial_direction_untargeted_fgsm(
         model=model, image=image_batch, label=torch.tensor([label])
     )
 
-    # filename = f"decision_boundary_adv_targeted_{label}_to_{target_class}"
-    # if "robust" in model_path:
-    #     filename = f"decision_boundary_robust_adv_targeted_{label}_to_{target_class}"
-
-    filename = f"decision_boundary_adv_untargeted_{label}"
-    if "robust" in model_path:
-        filename = f"decision_boundary_robust_adv_untargeted_{label}"
+    filename = f"decision_boundary_adv_untargeted_{label}_{model_path_no_ext}"
+    if jpeg_compression:
+        filename += "_jpeg_defense"
+    if thermometer_encoding:
+        filename += "_thermometer_encoding"
 
     _ = plot_decision_boundary(
         model=model,
@@ -448,6 +488,7 @@ def main() -> None:
         dir_y=dir_y,
         dir_x=dir_x,
         filename=filename,
+        compression_defense=compression_defense,
     )
 
     _ = plot_decision_boundary(
@@ -460,6 +501,7 @@ def main() -> None:
         dir_y=dir_y,
         dir_x=dir_x,
         filename=filename,
+        compression_defense=compression_defense,
     )
 
 
