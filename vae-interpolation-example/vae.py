@@ -1,6 +1,31 @@
 from typing import Tuple
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+
+def vae_loss(
+    tensor_image: torch.Tensor,
+    reconstructed_tensor_image: torch.Tensor,
+    mu: torch.Tensor,
+    logvar: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Compute the VAE loss as the sum of reconstruction loss and KL divergence.
+    Args:
+        tensor_image: Original input tensor image.
+        reconstructed_tensor_image: Reconstructed tensor image from the VAE.
+        mu: Mean from the encoder's latent space.
+        logvar: Log variance from the encoder's latent space.
+    Returns:
+        total_loss: Total VAE loss.
+    """
+    recon = F.mse_loss(
+        input=reconstructed_tensor_image, target=tensor_image, reduction="sum"
+    )
+    kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    total_loss = recon + kl
+    return total_loss, recon, kl
 
 
 class ConvEncoder(nn.Module):
@@ -38,7 +63,7 @@ class ConvDecoder(nn.Module):
         return self.deconv(h)
 
 
-def reparameterize(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+def sample_latent(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
     std = torch.exp(0.5 * log_var)
     eps = torch.randn_like(std)
     return mu + eps * std
@@ -60,5 +85,5 @@ class ConvVAE(nn.Module):
         self, x: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mu, logvar = self.encode(x)
-        z = reparameterize(mu, logvar)
+        z = sample_latent(mu, logvar)
         return self.decode(z), mu, logvar
