@@ -1,5 +1,5 @@
 {
-    "name": "vae-interpolation-example",
+    "name": "missing-normalization",
     "image": "torch_matplotlib:2.8.0-cuda",
     "customizations": {
         "vscode": {
@@ -9,5 +9,8 @@
         }
     },
     "containerUser": "${env:USERNAME}",
-    "runArgs": [ "--gpus", "all" ]
+    "runArgs": [
+        "--gpus",
+        "all"
+    ]
 }

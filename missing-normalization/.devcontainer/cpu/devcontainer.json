@@ -1,5 +1,5 @@
 {
-    "name": "vae-interpolation-example",
+    "name": "missing-normalization",
     "image": "torch_matplotlib:2.8.0",
     "customizations": {
         "vscode": {
