@@ -53,7 +53,7 @@ Finishes quickly as there are only 7 branches (one for the constructor and two p
 ```
 test0,tutorial.Stack.<init>()V: root-Branch
 test1,tutorial.Stack.push(Ljava/lang/Object;)V: I6 Branch 1 IF_ICMPLT L12 - true
-test4,tutorial.Stack.push(Ljava/lang/Object;)V: I6 Branch 1 IF_ICMPLT L12 - false
+test4,tutorial.Stack.push(Ljava/lang/Object;)V: I6 Branch 1 IF_ICMPLT L12  - false
 test3,tutorial.Stack.pop()Ljava/lang/Object;: I4 Branch 2 IFGT L18 - true
 test2,tutorial.Stack.pop()Ljava/lang/Object;: I4 Branch 2 IFGT L18 - false
 test0,tutorial.Stack.isEmpty()Z: I4 Branch 3 IFGT L24 - false
