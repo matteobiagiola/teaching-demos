@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.8.0-cuda12.6-cudnn9-runtime
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
 
 WORKDIR /home
 
@@ -14,7 +14,8 @@ RUN useradd --uid $USER_UID --gid $USER_GID -ms /bin/bash $USERNAME
 
 RUN apt update -y
 
-RUN pip install torch==2.8.0 torchvision==0.23.0 --extra-index-url https://download.pytorch.org/whl/cpu
+# torch 2.8.0 + CUDA 12.8 come from the base image; torchvision must match
+RUN pip install torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu128 --no-deps
 RUN pip install matplotlib==3.10.6
 
 USER $USERNAME
