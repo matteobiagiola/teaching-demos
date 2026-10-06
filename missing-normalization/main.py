@@ -107,6 +107,22 @@ def main():
     print(f"Using seed: {seed}")
     torch.manual_seed(seed)
 
+    ####################
+    #### Randomness ####
+    ####################
+
+    # # first example
+    # a1, a2 = torch.rand(1), torch.rand(1)
+    # print(a1, a2)
+    # exit(0)
+
+    # # second example
+    # a1 = torch.rand(1)
+    # _ = nn.Linear(4, 4)
+    # a2 = torch.rand(1)
+    # print(a1, a2)
+    # exit(0)
+
     train_batch_size = args.train_batch_size
     assert train_batch_size > 0, "Batch size must be a positive integer."
     epochs = args.epochs
@@ -134,6 +150,30 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))  # mean and std for MNIST
     ])
 
+    #########################
+    #### Data inspection ####
+    #########################
+
+    # train_dataset_original = datasets.MNIST('data', train=True, download=True)
+    # img_pil, _ = train_dataset_original[0]   # img_pil is a PIL.Image (grayscale)
+    
+    # print(f"Original image format: {np.array(img_pil).shape}")
+    # print(np.array(img_pil))  # (H, W), values in [0, 255]
+    # exit(0)
+
+    # # apply transforms to the same PIL image
+    # x_unnorm = transform_unnormalized(img_pil)     # torch.Size([C, H, W]), values in [0.0, 255.0], C is the channel dimension (1 for grayscale images)
+    # print(f"\nAfter ToTensor (unnormalized): {x_unnorm.shape}")
+    # print(x_unnorm)
+    # exit(0)
+
+    # x_norm   = transform_normalized(img_pil)       # torch.Size([C, H, W]), roughly in [-0.42, 2.82]
+    # print(f"\nAfter ToTensor + Normalize (normalized): {x_norm.shape}")
+    # print(x_norm)
+    # print("\nThe normalized image has mean 0 and std 1 approximately.")
+    # print("Mean:", x_norm.mean().item(), "Std:", x_norm.std().item())
+    # exit(0)
+
     # Download and create data loaders
     print("Downloading and preparing datasets...")
     train_dataset_unnormalized = datasets.MNIST('data', train=True, download=True, transform=transform_unnormalized)
@@ -147,31 +187,19 @@ def main():
     # Log 10 times per epoch
     log_interval = max(1, (len(train_dataset_normalized) // train_batch_size) // 10)
     
-    # data inspection, original, unnormalized and normalized
-    # train_dataset_original = datasets.MNIST('data', train=True, download=True)
-    # img_pil, _ = train_dataset_original[0]   # img_pil is a PIL.Image (grayscale)
-    # print(f"Original image format: {np.array(img_pil).shape}")
-    # print(np.array(img_pil))  # (H, W), values in [0, 255]
-    # # apply transforms to the same PIL image
-    # x_unnorm = transform_unnormalized(img_pil)     # torch.Size([C, H, W]), values in [0.0, 255.0]
-    # print(f"\nAfter ToTensor (unnormalized): {x_unnorm.shape}")
-    # print(x_unnorm)
-    # x_norm   = transform_normalized(img_pil)       # torch.Size([C, H, W]), roughly in [-0.42, 2.82]
-    # print(f"\nAfter ToTensor + Normalize (normalized): {x_norm.shape}")
-    # print(x_norm)
-    # print("\nThe normalized image has mean 0 and std 1 approximately.")
-    # print("Mean:", x_norm.mean().item(), "Std:", x_norm.std().item())
-    # exit(1)
-    
     # Setup for Unnormalized Model
     model_unnormalized = SimpleNet().to(device)
-    
-    # # example tensor shape error
+
+    ####################################
+    #### Example tensor shape error ####
+    ####################################
+
     # with torch.no_grad():
-    #     img1 = torch.randn(2, 1, 28, 28) # (B, C, H, W)
+    #     img1 = torch.randn(1, 1, 28, 28) # (B, C, H, W), this is what the model expects
+    #     # img1 = torch.randn(28, 28) # (H, W) if we pass this, there is a tensor shape error
     #     out = model_unnormalized(img1)
     #     print(out.shape)  # should be (1, 10)
-    # exit(1)
+    # exit(0)
     
     # GPU bug
     # model_unnormalized = SimpleNet()
