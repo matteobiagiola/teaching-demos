@@ -201,7 +201,10 @@ def main():
     #     print(out.shape)  # should be (1, 10)
     # exit(0)
     
-    # GPU bug
+    #################
+    #### GPU bug ####
+    #################
+    
     # model_unnormalized = SimpleNet()
     optimizer_unnormalized = optim.SGD(model_unnormalized.parameters(), lr=learning_rate)
 
