@@ -93,7 +93,10 @@ def main() -> None:
     lsa_ticks = [2, 5, 10, 20, 50, 100, 200]
     # For DSA, the important value is 1. If DSA is more than 1, the input is
     # farther from class A (dist_a) than class A is from a different class
-    # (dist_b). Because of this, the DSA subfigure shows only two areas.
+    # (dist_b). A logarithmic scale from 0.1 to 10 puts DSA = 1 in the middle
+    # of the color scale. DSA is less than 1 in the light areas and more than
+    # 1 in the dark areas.
+    dsa_ticks = [0.1, 0.2, 0.5, 1, 2, 5, 10]
     subfigures = [
         (
             "LSA = -log(density of class A)",
@@ -106,12 +109,12 @@ def main() -> None:
         ),
         (
             "DSA = dist_a / dist_b (predicted class A)",
-            "DSA of a test input at this point",
-            (grid_dsa > 1.0).astype(float),
-            colors.ListedColormap(["white", "#b0b0b0"]),
-            colors.Normalize(vmin=0.0, vmax=1.0),
-            [0.25, 0.75],
-            ["DSA < 1", "DSA > 1"],
+            "DSA of a test input at this point (log scale)",
+            grid_dsa,
+            "Greys",
+            colors.LogNorm(vmin=0.1, vmax=10.0),
+            dsa_ticks,
+            [str(tick) for tick in dsa_ticks],
         ),
     ]
     for ax, (title, colorbar_label, values, cmap, norm, ticks, labels) in zip(

@@ -157,7 +157,7 @@ With DSA, 100 random test inputs give an SC of 7.70%, 1,000 give 30.80%, and all
 As a result, SC can show that a test set is small or not diverse.
 
 The other two subfigures of the plot show the problems of SC.
-The value of SC depends on parameters that are not related to the test inputs:
+The value of SC depends on parameters that are not related to test inputs:
 
 - For different values of `U`, the SC of the same test set changes from 0.00% to 87.30%.
 - For different numbers of buckets `n`, the SC of the same test set changes from 80.00% (10 buckets) to 30.88% (10,000 buckets).
