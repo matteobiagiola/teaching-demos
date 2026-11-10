@@ -13,6 +13,10 @@ The layers decide the type of failure that the search can find.
 5. show the fault (biased training data). In the training set of the faulty classifier, the bold 0s have the label 1.
 Only the hold-out set of the bold 0s shows the fault clearly (18.67% against 100.00%); on all the test images the accuracy is 94.00% against 98.11%.
 
-6. show results/fault/tests_clean_0to1_early.png and tests_faulty_0to1_early.png (fault detection). Same seeds (the lightest 0s), same search. With the clean classifier, the 0s get thinner and change shape to become a 1. With the faulty classifier, the tests are still 0s, and some are clearly bolder (7 of 10 tests are bolder): the tests show the spurious feature that the classifier uses. The search changes a feature of the image (the boldness), not single pixels; this is not possible with a search in the pixel space.
+6. show results/fault/tests_clean_0to1_early.png and tests_faulty_0to1_early.png (fault detection). 
+Same seeds (the lightest 0s), same search. 
+With the clean classifier, the 0s get thinner and change shape to become a 1. 
+With the faulty classifier, the tests are still 0s, and some are clearly bolder (7 of 10 tests are bolder): the tests show the spurious feature that the classifier uses. 
+The search changes a feature of the image (the boldness), not single pixels; this is not possible with a search in the pixel space.
 
-7. Excercise: 
+7. Excercise: what would happen with the late layers? Would perturbations on the late layers be able to reveal the fault?
